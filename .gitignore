@@ -7,6 +7,7 @@
 .idea/**/workspace.xml
 .idea/**/tasks.xml
 .idea/dictionaries
+.idea/*
 
 # Sensitive or high-churn files:
 .idea/**/dataSources/
@@ -59,3 +60,4 @@ fabric.properties
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 
+~/
