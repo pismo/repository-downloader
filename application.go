@@ -2,31 +2,31 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
 type Repository struct {
-	Id     int64  `json:id`
-	Name   string `json:name`
-	Url    string `json:html_url`
+	Name   string `json:"name"`
 	SshUrl string `json:"ssh_url,omitempty"`
-	Size   int64  `json:size`
 }
 
 func main() {
-	url := fmt.Sprintf("https://api.github.com/orgs/pismo/repos?per_page=100&page=1")
-	//url := fmt.Sprintf("https://api.github.com/orgs/pismo/repos?per_page=100&page=2")
+	url := os.Args[1]
+	token := os.Args[2]
+	folder := os.Args[3]
 
-	req, err := http.NewRequest("GET", url, nil)
+	url = strings.TrimSuffix(url, "/")
+	req, err := http.NewRequest("GET", url+"?per_page=100&page=1", nil)
 	if err != nil {
 		log.Fatal("NewRequest: ", err)
 		return
 	}
-	req.Header.Set("Authorization", "token poasdpoasdkpaskdopsakdpokas")
+	req.Header.Set("Authorization", "token "+token)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -49,15 +49,15 @@ func main() {
 	wg.Add(len(repos))
 
 	for _, repo := range repos {
-		go getrepo(repo, wg)
+		go getrepo(folder, repo, wg)
 	}
 	wg.Wait()
 	log.Println("Done :D")
 }
 
-func getrepo(repo Repository, wg sync.WaitGroup) {
+func getrepo(folder string, repo Repository, wg sync.WaitGroup) {
 	defer wg.Done()
-	_, err := exec.Command("git", "clone", repo.SshUrl, "~/pismo/"+repo.Name).Output()
+	_, err := exec.Command("git", "clone", repo.SshUrl, folder+repo.Name).Output()
 	if err != nil {
 		log.Println("Unable to get " + repo.Name)
 		log.Fatal(err)
