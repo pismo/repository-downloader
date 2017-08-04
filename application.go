@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -21,37 +22,43 @@ func main() {
 	folder := os.Args[3]
 
 	url = strings.TrimSuffix(url, "/")
-	req, err := http.NewRequest("GET", url+"?per_page=100&page=1", nil)
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
+	if !strings.HasSuffix(folder, "/") {
+		folder = folder + "/"
+	}
+
+	for {
+		index := 0
+		index++
+
+		req, err := http.NewRequest("GET", url+"?per_page=100&page="+strconv.Itoa(index), nil)
+		if err != nil {
+			log.Fatal("NewRequest: ", err)
+		}
+		req.Header.Set("Authorization", "token "+token)
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+
+		defer resp.Body.Close()
+		var repos []Repository
+
+		if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
+			return
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(len(repos))
+
+		for _, repo := range repos {
+			go getrepo(folder, repo, wg)
+		}
+
+		wg.Wait()
 		return
 	}
-	req.Header.Set("Authorization", "token "+token)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		log.Println("Server return non-200 status: %v\n", resp.Status)
-	}
-
-	defer resp.Body.Close()
-	var repos []Repository
-
-	if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
-		log.Println(err)
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(len(repos))
-
-	for _, repo := range repos {
-		go getrepo(folder, repo, wg)
-	}
-	wg.Wait()
 	log.Println("Done :D")
 }
 
@@ -62,5 +69,5 @@ func getrepo(folder string, repo Repository, wg sync.WaitGroup) {
 		log.Println("Unable to get " + repo.Name)
 		log.Fatal(err)
 	}
-	log.Println("Done " + repo.Name)
+	log.Println("Done " + repo.Name + "saved on " + folder + repo.Name)
 }
